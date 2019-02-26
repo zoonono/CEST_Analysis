@@ -26,8 +26,7 @@ directory_images = strcat(directory,'\images_and_figures');
 
 %% Put the Bruker numbering of folders of scans in order 
 % Checks if the bruker numbering of scans is continuous or not;
-% if not, the USER has to type the exact order 
-% it is usually in the correct order already...
+% if not, the USER has to type the exact order; it is usually in the correct order already...
 [scan_numbering] = scan_ordering(input.first_baseline, input.number_of_scans, input.regular_order); 
 
 %% Read anatomical scan
@@ -79,6 +78,8 @@ for ii = 1 : input.number_of_scans %loop over scan folders
                                parameters_reco, parameters_2dseq);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% separate individual ppm sets within a scan of many sets repeats
 i_time = 1;
 flag = 0;
@@ -87,23 +88,39 @@ for ii = 1 : input.number_of_scans
   for jj = 1 : cest_scan(ii).number_of_ppm_values
     if cest_scan(ii).ppm_values(jj) == cest_scan(ii).ppm_values(1) && jj ~= 1    
       ppm_number = 1; 
-      timeline(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
-      data_in_ppm_sets(i_time) = cest_scan(ii);
+      ppms(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
+      data_in_ppm_sets(i_time).image_2dseq(:,:,ppm_number) = cest_scan(ii).image_2dseq(:,:,jj); 
+      data_in_ppm_sets(i_time).image_in_gray_scale(:,:,ppm_number) = cest_scan(ii).image_in_gray_scale(:,:,jj);
+%       data_in_ppm_sets(i_time).folder_number(ppm_number) = cest_scan(ii).folder_number(jj);
+      data_in_ppm_sets(i_time).ppm_values(ppm_number) = cest_scan(ii).ppm_values(jj);
+      data_in_ppm_sets(i_time).slope_values(ppm_number) = cest_scan(ii).slope_values(jj);
+%       data_in_ppm_sets(i_time).FOV(ppm_number) = cest_scan(ii).FOV(jj);
+%       data_in_ppm_sets(i_time).size_x(ppm_number) = cest_scan(ii).size_x(jj);
+%       data_in_ppm_sets(i_time).size_y(ppm_number) = cest_scan(ii).size_y(jj);
       i_time = i_time + 1;
     else
       ppm_number = ppm_number + 1;
-      timeline(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
-      data_in_ppm_sets(i_time) = cest_scan(ii);
+      ppms(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
+      data_in_ppm_sets(i_time).image_2dseq(:,:,ppm_number) = cest_scan(ii).image_2dseq(:,:,jj); 
+      data_in_ppm_sets(i_time).image_in_gray_scale(:,:,ppm_number) = cest_scan(ii).image_in_gray_scale(:,:,jj);
+%       data_in_ppm_sets(i_time).folder_number(ppm_number) = cest_scan(ii).folder_number(jj);
+      data_in_ppm_sets(i_time).ppm_values(ppm_number) = cest_scan(ii).ppm_values(jj);
+      data_in_ppm_sets(i_time).slope_values(ppm_number) = cest_scan(ii).slope_values(jj);
+%       data_in_ppm_sets(i_time).FOV(ppm_number) = cest_scan(ii).FOV(jj);
+%       data_in_ppm_sets(i_time).size_x(ppm_number) = cest_scan(ii).size_x(jj);
+%       data_in_ppm_sets(i_time).size_y(ppm_number) = cest_scan(ii).size_y(jj);
     end
   end  
   i_time = i_time + 1;
 end
 
 for i = 1 : i_time-1
-  data_in_ppm_sets(i).ppm_values = timeline(i,:);
+  data_in_ppm_sets(i).ppm_values = ppms(i,:);
   data_in_ppm_sets(i).number_of_ppm_values = length (data_in_ppm_sets(1).ppm_values);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 close(h)
 clear parameters   parameters_acqp   parameters_method %stored in CEST scan
@@ -150,12 +167,12 @@ end
 % number of non zero (nnz) elements of resized ROI mask
 nnz_sum_roi = nnz (masks.sum_roi_resized);
 
-%% Mask the (ppm sorted) cest scans with anatomical and roi masks
+%% Mask the data_in_ppm_sets scans with roi masks
 
-for ii = 1 : input.number_of_scans
-  for jj = 1 : cest_scan(ii).number_of_ppm_values
+for ii = 1 : length(data_in_ppm_sets)
+  for jj = 1 : data_in_ppm_sets(ii).number_of_ppm_values
     %temporarely created variable image_2dseq for the multiplication    
-    image_2dseq (:,:) = cest_scan(ii).image_2dseq(:,:,jj);
+    image_2dseq (:,:) = data_in_ppm_sets(ii).image_2dseq(:,:,jj);
 
     %scans masked only with RESIZED sum_ROI mask
     masked_scan(ii).sum_roi(:,:,jj) = immultiply(image_2dseq, masks.sum_roi_resized); 
@@ -176,3 +193,30 @@ for ii = 1 : input.number_of_scans
   end
 end
 clear image_2dseq
+
+ %% Mask the (ppm sorted) cest scans with anatomical and roi masks
+% 
+% for ii = 1 : input.number_of_scans
+%   for jj = 1 : cest_scan(ii).number_of_ppm_values
+%     %temporarely created variable image_2dseq for the multiplication    
+%     image_2dseq (:,:) = cest_scan(ii).image_2dseq(:,:,jj);
+% 
+%     %scans masked only with RESIZED sum_ROI mask
+%     masked_scan(ii).sum_roi(:,:,jj) = immultiply(image_2dseq, masks.sum_roi_resized); 
+%     %scans masked with individual ROIs mask
+%     if  masks.number_of_rois > 1
+%       for kk = 1 : masks.number_of_rois
+%       masked_scan(ii).rois(:,:,jj,kk) = immultiply(image_2dseq, masks.rois_resized(:,:,kk)); 
+%       end
+%     end
+%    
+%     %convert masked cest scans images in gray scale
+%     masked_scan(ii).sum_roi_in_gray_scale(:,:,jj) = mat2gray(masked_scan(ii).sum_roi(:,:,jj));
+%     if  masks.number_of_rois > 1
+%       for kk = 1 : masks.number_of_rois
+%         masked_scan(ii).rois_in_gray_scale(:,:,jj,kk) = mat2gray(masked_scan(ii).rois(:,:,jj,kk));
+%       end
+%     end
+%   end
+% end
+% clear image_2dseq

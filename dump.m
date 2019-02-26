@@ -1,22 +1,39 @@
-i_time = 1;
-flag = 0;
-for ii = 1 : input.number_of_scans
-  ppm_number = 0;  
-  for jj = 1 : cest_scan(ii).number_of_ppm_values
-    if cest_scan(ii).ppm_values(jj) == cest_scan(ii).ppm_values(1) && jj ~= 1    
-      ppm_number = 1; 
-      timeline(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
-      data_in_ppm_sets(i_time) = cest_scan(ii);
-      i_time = i_time + 1;
-    else
-      ppm_number = ppm_number + 1;
-      timeline(i_time,ppm_number) = cest_scan(ii).ppm_values(jj);
-      data_in_ppm_sets(i_time) = cest_scan(ii);
-    end
-  end  
-  i_time = i_time + 1;
+%% mask image with roi
+
+nnz_masked_sets = nnz(masks.sum_roi_resized);
+
+for ii = 1 : length(data_in_ppm_sets)
+  for jj = 1 : data_in_ppm_sets(ii).number_of_ppm_values
+    %temporarely created variable image_temp for the multiplication    
+    image_temp(:,:) = data_in_ppm_sets(ii).image_in_gray_scale(:,:,jj);
+    %scans masked only with RESIZED sum_ROI mask
+    masked_sets(ii).image_in_gray_scale(:,:,jj) = immultiply(image_temp, masks.sum_roi_resized); 
+    
+    raw_spectra_roi(ii,jj) = sum(sum(masked_sets(ii).image_in_gray_scale(:,:,jj)))/nnz_masked_sets;
+  end
 end
 
-for i = 1 : 270
-  data_in_ppm_sets(i).timeline(:) = timeline(i,:);
-end
+
+
+
+
+% % %% put all ppm values in a timeline stack of images
+% % i=1;
+% % 
+% % for ii = 1: length(data_in_ppm_sets)
+% %   for jj = 1: data_in_ppm_sets(ii).number_of_ppm_values  
+% %     images{i} = data_in_ppm_sets(ii).image_in_gray_scale(:,:,jj);
+% %     i = i + 1;
+% %   end
+% % end
+% % 
+% % Imatrix = []; 
+% % for i = 1:length(data_in_ppm_sets)* data_in_ppm_sets(ii).number_of_ppm_values
+% %     Imatrix = cat(3, Imatrix, images{i});
+% % end
+% % 
+% % for jj = 1: data_in_ppm_sets(ii).number_of_ppm_values  
+% %     figure
+% %     imshow(data_in_ppm_sets(ii).image_in_gray_scale(:,:,jj))
+% % end
+% % 

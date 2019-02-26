@@ -11,8 +11,10 @@
 
 %% Study specific parameters 
 
-prompt = {'Number of baselines',...
+prompt = {'Number of baseline scans',...
+          'Number of baseline sets',...
           'Number of post-injection scans',...
+          'Number of post-injection sets',...
           'Uninterapted numbering of scans (yes/no)',...
           'Anatomical scan number',...
           'First baseline folder number',...
@@ -24,7 +26,11 @@ prompt = {'Number of baselines',...
           'Fasted or not (yes/no)'};
 dlg_title = 'Study specific input';
 num_lines = 1;
-defaults = {'10','51','yes','6','11','21','3omg 1min infusion','+','44','Io','no'};
+defaults = {'0','0','1','200','yes','5','10','10','3omg insulin glc gal','+','30','H-Thebe','no'};
+% defaults = {'1','20','5','280','yes','5','9','10','3omg insulin glc gal','+','30','H-Thebe','no'};
+% defaults = {'1','20','5','280','yes','7','12','13','3omg insulin glc gal','+','30','H-Adrastea2012','no'};
+% defaults = {'1','20','5','280','yes','6','9','10','3omg insulin glc gal','+','30','H-Io','no'};
+% defaults = {'1','20','5','280','yes','6','9','10','3omg insulin glc gal','+','30','H-Metis','no'};
 answer1 = inputdlg(prompt,dlg_title,num_lines,defaults);
 
 
@@ -45,22 +51,28 @@ answer2 = inputdlg(prompt,dlg_title,num_lines,defaults);
 %% rename input parameters
 
 input.number_of_baselines = str2num(answer1{1});
-input.number_of_post_inj_scans = str2num(answer1{2});
+input.number_of_baseline_sets = str2num(answer1{2});
+input.number_of_post_inj_scans = str2num(answer1{3});
+input.number_of_post_inj_sets = str2num(answer1{4});
 
 input.number_of_scans = input.number_of_baselines + ...
                         input.number_of_post_inj_scans ;
 
-input.regular_order = answer1{3};
-input.anatomical_scan_folder_number = answer1{4};
-input.first_baseline = str2num(answer1{5});
-input.first_post_inj_scan = str2num(answer1{6});
-input.administration = answer1{7};
-input.agent_sign = answer1{8};
-input.scan_duration = answer1{9};
+input.number_of_sets = input.number_of_baseline_sets + ...
+                        input.number_of_post_inj_sets ;
+                    
+
+input.regular_order = answer1{5};
+input.anatomical_scan_folder_number = answer1{6};
+input.first_baseline = str2num(answer1{7});
+input.first_post_inj_scan = str2num(answer1{8});
+input.administration = answer1{9};
+input.agent_sign = answer1{10};
+input.scan_duration = answer1{11};
   scan_duration_min_sec = ...
   [floor(str2num(input.scan_duration)/60) mod(str2double(input.scan_duration), 60)];
-input.mouse_name = answer1{10};
-input.fasted = answer1{11};
+input.mouse_name = answer1{12};
+input.fasted = answer1{13};
 
 input.Rsqr_threshold = str2num(answer2{1}); % R^2, "goodness" of pixel value threshold!
 input.ppm_mid_point_of_auc = str2num(answer2{2});
@@ -75,6 +87,7 @@ clear answer1 answer2 defaults num_lines dlg_title prompt
 %% set directory - create flags - set initial regularization factor
 
 %set directory that includes the scan folders
+cd ('D:\DATA_glucoCEST');
 directory=uigetdir;
 
 %creates flags to be used in the interpolation calculation
@@ -88,6 +101,6 @@ input.flag_integral = 1;
 end
 
 %% experiment timeline
-for i = 1: input.number_of_scans
-    experiment_time(i) = i* str2num(input.scan_duration); % in seconds
+for i = 1: input.number_of_sets
+    experiment_time(i) = i* str2num(input.scan_duration)/60; % in minutes
 end
