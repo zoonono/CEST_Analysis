@@ -1,66 +1,24 @@
-%H-Thebe 29.1.2019
+%% Analyze glucoCEST MRI data and SPEED data
+%% LOG
+%created by:   Afroditi     26.02.2019
+
+%add CEST_Analysis to path
+addpath('C:\Users\Afroditi\Documents\GitHub\CEST_Analysis');
+addpath(genpath('C:\Users\Afroditi\Documents\GitHub\CEST_Analysis'));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                       g l u c o C E S T                                 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Study specific parameters 
-prompt = {'Number of baseline scans',...
-          'Number of baseline sets',...
-          'Number of post-injection scans',...
-          'Number of post-injection sets',...
-          'Uninterapted numbering of scans (yes/no)',...
-          'Anatomical scan number',...
-          'First baseline folder number',...
-          'First post-injection folder number',...
-          'Administration agent/concentration/route',...
-          'Positive or negative ppm of agent?',...
-          'Actual scan duration (in sec)',...
-          'Name of mouse :)',...
-          'Fasted or not (yes/no)'};
-dlg_title = 'Study specific input';
-num_lines = 1;
-defaults = {'0','20','1','380','yes','8','11','11','insulin glc','+','30','H-Thebe','no'};
-answer1 = inputdlg(prompt,dlg_title,num_lines,defaults);
-
-%rename input parameters
-input.number_of_baselines = str2num(answer1{1});
-input.number_of_baseline_sets = str2num(answer1{2});
-input.number_of_post_inj_scans = str2num(answer1{3});
-input.number_of_post_inj_sets = str2num(answer1{4});
-
-input.number_of_scans = input.number_of_baselines + ...
-                        input.number_of_post_inj_scans ;
-input.number_of_sets = input.number_of_baseline_sets + ...
-                        input.number_of_post_inj_sets ;
-                    
-input.regular_order = answer1{5};
-input.anatomical_scan_folder_number = answer1{6};
-input.first_baseline = str2num(answer1{7});
-input.first_post_inj_scan = str2num(answer1{8});
-input.administration = answer1{9};
-input.agent_sign = answer1{10};
-input.scan_duration = answer1{11};
-  scan_duration_min_sec = ...
-  [floor(str2num(input.scan_duration)/60) mod(str2double(input.scan_duration), 60)];
-input.mouse_name = answer1{12};
-input.fasted = answer1{13};
-
-clear answer1 defaults num_lines dlg_title prompt
-
-%% set directory - create flags - set initial regularization factor
-
-%set directory that includes the scan folders
-directory = 'D:\DATA_glucoCEST\omg_ins_glc_gal\20190129_135535_CEST_Thebe_1_2';
-
 %% experiment timeline
 for i = 1: input.number_of_sets
-    experiment_time(i) = i* str2num(input.scan_duration)/60; % in minutes
+    experiment_time(i) = i* input.scan_duration/60; % in minutes
 end
 
 %% Make 'images_and_figures' directory into experiment folder
+cd(dir_CEST);
 mkdir('images_and_figures');
-directory_images = strcat(directory,'\images_and_figures');
+directory_images = strcat(dir_CEST,'\images_and_figures');
 
 %% Put the Bruker numbering of folders of scans in order 
 % Checks if the bruker numbering of scans is continuous or not;
@@ -71,11 +29,11 @@ directory_images = strcat(directory,'\images_and_figures');
 % Stores some of information (only what's needed) from the files:
 % 'read_acqp', 'read_method', 'read_reco' and 'read_2dseq'.
 % Note: you can select one on the functions and press F1 to see info (including output)
-[parameters_acqp] = read_acqp(input.anatomical_scan_folder_number, directory);
-[parameters_method] = read_method(input.anatomical_scan_folder_number, directory);
-[parameters_reco] = read_reco(input.anatomical_scan_folder_number, directory);     
+[parameters_acqp] = read_acqp(input.anatomical_scan_folder_number, dir_CEST);
+[parameters_method] = read_method(input.anatomical_scan_folder_number, dir_CEST);
+[parameters_reco] = read_reco(input.anatomical_scan_folder_number, dir_CEST);     
 [parameters_2dseq] =read_2dseq(input.anatomical_scan_folder_number,...
-                               directory, parameters_reco, parameters_acqp);
+                               dir_CEST, parameters_reco, parameters_acqp);
 
 % Saves all parameters from the four functions in 'anatomical_scan' structure
 [anatomical_scan] = structcat(parameters_acqp, parameters_method, ...
@@ -106,10 +64,10 @@ for ii = 1 : input.number_of_scans %loop over scan folders
    % is just the number of baselines.
    % Note: you can select one on the functions and press F1 to see info (including output)
    waitbar(ii/input.number_of_scans)
-   [parameters_acqp] = read_acqp (scan_numbering(ii),directory);
-   [parameters_method] = read_method(scan_numbering(ii), directory);
-   [parameters_reco] = read_reco(scan_numbering(ii), directory);                  
-   [parameters_2dseq] =read_2dseq(scan_numbering(ii), directory,...
+   [parameters_acqp] = read_acqp (scan_numbering(ii),dir_CEST);
+   [parameters_method] = read_method(scan_numbering(ii), dir_CEST);
+   [parameters_reco] = read_reco(scan_numbering(ii), dir_CEST);                  
+   [parameters_2dseq] =read_2dseq(scan_numbering(ii), dir_CEST,...
                                   parameters_reco, parameters_acqp);
    % Saves all parameters from the four functions in 'cest_scan' structure.
    [cest_scan(ii)] = structcat(parameters_acqp, parameters_method, ...
@@ -229,36 +187,6 @@ end
 %                             S P E E D                                   %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Set the output format of the command window to the short engineering format 
-%with compact line spacing (NO NEED for this command really...)
-format shortEng
-
-file = 'Thebe_2901.txt';
-path = 'D:\DATA_SPEED\Data\H-Thebe\29012019_Thebe';
-cd(path); %go to the path of the specified file
-fileID = fopen(file);
-formatSpec = '%s %f %f %f %f %f %f %f %s';
-A = textscan(fileID,formatSpec,'HeaderLines',12); %ignores first 12 lines
-% Col 1: time (hh:mm:ss:ms)
-% Col 2: time elapsed from sequence start (sec)
-% Col 3: Ch 1 amplitude
-% Col 4: Ch 2 amplitude
-% Col 5: Ratio Ch1/Ch2
-% Col 6: Ratio Ch2/Ch1
-% Col 7: Ch1 SNR
-% Col 8: Ch2 SNR
-% Col 9: date
-time    = char(A{1,1}); %(hh:mm:ss:ms)
-time_elapsed = A{1,2}; %sec
-YFP          = A{1,3}; %ch1
-CFP          = A{1,4}; %ch2
-FLIIP        = A{1,5}; %(ch1/ch2)
-Laconic      = A{1,6}; %(ch2/ch1)
-YFP_SNR      = A{1,7}; %(SNR Ch1)
-CFP_SNR      = A{1,8}; %(SNR Ch2)
-date_exprmt_column  = A{1,9}; %(YYYY:M(M):D(D))
-fclose(fileID);
-
 %format the variables you just read!
 %make date in format D(D)-M(M)-YYYY
 date_exprmt = split(date_exprmt_column(1),":");
@@ -288,23 +216,25 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 f = figure;
-set(f, 'PaperOrientation', 'landscape'); %'PaperSize', [21 29.7],
+set(f, 'PaperOrientation', 'portrait'); %'PaperSize', [21 29.7], 
+%landscape or Portrait
 
 % SPEED; plot FLIIP vs TIME  
 
-%    yyy = norm_FLIIP; 
-   yyy = movmean(norm_FLIIP,100);
+%    yyy = norm_FLIIP; %no moving averaga used here
+   yyy = movmean(norm_FLIIP,100); %using moving average for smoother data curve
    
-   sp3 = subplot(2,1,1);
+   sp3 = subplot(3,1,1);
    p3 = plot(time_in_min(1:length(norm_FLIIP)),yyy);
    p3.LineWidth = 1.5;
    p3.Color = [73/255 0/255 188/255];
+   min1 = min(yyy);
+   max1 = max(yyy)+ 0.05*max(yyy);
+   ylim ([min1 max1])
    xlim ([0 100])
-   ylim ([min(yyy) max(yyy)+ 0.05*max(yyy)]) 
 
-   line([10,55], [-2.5,-2.5],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
-   line([60,100], [-2.5,-2.5],'Color', 'red','LineWidth', 1.5) %([x,x],[y,y])
-
+   line([10,55], [min1 + abs(0.05*min1),min1 + abs(0.05*min1)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
+   line([70,95], [min1 + abs(0.05*min1),min1 + abs(0.05*min1)],'Color', 'red','LineWidth', 1.5) %([x,x],[y,y])
 
 ax = ancestor(sp3, 'axes');
    ax.YAxis.FontSize = 13;
@@ -319,23 +249,17 @@ ax = ancestor(sp3, 'axes');
    t = title('FLIIP ratio');
    t.FontSize = 13;
 
-% GlucoCEST; plot timeline of 1.2ppm normalized to first baseline
+%% GlucoCEST; plot timeline of 1.2ppm normalized to first baseline
    
-f2 = subplot(2,1,1);
+f2 = subplot(3,1,2);
 signal2 = - 100*(raw_spectra_roi(:,3)-raw_spectra_roi(1,3))/raw_spectra_roi(1,3);
 plot(experiment_time(:),signal2)
 min2 = min(signal2);
 max2 = max(signal2)+ 0.05*max(signal2);
-   line([10,11], [min2 + abs(0.05*min2),min2 + abs(0.05*min2)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
-   line([25,70], [min2 + abs(0.05*min2),min2 + abs(0.05*min2)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
-   line([83,130],[min2 + abs(0.05*min2),min2 + abs(0.05*min2)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
-   line([10,10],   [min2,max2],'Color', [0.8 0.8 0.8],'LineWidth', 0.5) %([x,x],[y,y])
-   line([110,110], [min2,max2],'Color', [0.8 0.8 0.8],'LineWidth', 0.5) %([x,x],[y,y])
-   line([120,120], [min2,max2],'Color', [0.8 0.8 0.8],'LineWidth', 0.5) %([x,x],[y,y])
-   line([130,130], [min2,max2],'Color', [0.8 0.8 0.8],'LineWidth', 0.5) %([x,x],[y,y])
-   line([140,140], [min2,max2],'Color', [0.8 0.8 0.8],'LineWidth', 0.5) %([x,x],[y,y])
+   line([10,55], [min2 + abs(0.05*min2),min2 + abs(0.05*min2)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
+   line([70,95], [min2 + abs(0.05*min2),min2 + abs(0.05*min2)],'Color', 'red','LineWidth', 1.5) %([x,x],[y,y])
    ylim ([min2 max2])
-   xlim ([0 140])
+   xlim ([0 100])
 %plot(experiment_time(21:220),raw_spectra_roi(21:220,3)/raw_spectra_roi(21,3))
 ax2 = ancestor(f2, 'axes');
    ax2.YAxis.FontSize = 13;
@@ -350,11 +274,35 @@ ax2 = ancestor(f2, 'axes');
    t = title('glucoCEST @1.2ppm');
    t.FontSize = 13;   
  
-   
-   % SPEED; plot FLIIP vs TIME  
 
+%% SPEED; Mouse TEMPERATURE vs TIME  
+
+f3 = subplot(3,1,3);
+plot(time_temperature,temperature)
+min3 = 36; %min(temperature);
+max3 = 38.5; % max(temperature)+ 0.05*max(temperature);
+line([10,55], [min3 + abs(0.0005*min3),min3 + abs(0.0005*min3)],'Color', 'black','LineWidth', 1.5) %([x,x],[y,y])
+line([70,95], [min3 + abs(0.0005*min3),min3 + abs(0.0005*min3)],'Color', 'red','LineWidth', 1.5) %([x,x],[y,y])
+ylim ([min3 max3])
+xlim ([0 100])
+
+ax2 = ancestor(f2, 'axes');
+   ax2.YAxis.FontSize = 13;
+   ax2.XAxis.FontSize = 13;
+
+   x2 = xlabel('Time (min)');
+   x2.FontSize = 12;
+
+   y2 = ylabel('Temperature (C)');
+   y2.FontSize = 12;
+
+   t = title('Temperature');
+   t.FontSize = 13;   
 
    
  %%
-   cd('D:\DATA_glucoCEST\omg_ins_glc_gal');
-   print('-bestfit', 'Thebe2901_.pdf','-dpdf')
+   cd(dir_CEST);
+   unique = datestr(datetime,'ddmmyyyyHHMMSS');
+   print('-bestfit', [input.mouse_name,'_',date_of_experiment,'_',unique,'.pdf'],'-dpdf')
+   
+   

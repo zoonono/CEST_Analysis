@@ -13,9 +13,9 @@
 function[scan] = scan_ordering(first,number_of_scans,regular_order)
 
 % checks if the numbering of scans is continuous or not
-if strcmp(regular_order, 'yes')| strcmp(regular_order,'Yes')| ...
+if regular_order == 1 | strcmp(regular_order, 'yes')| strcmp(regular_order,'Yes')| ...
    strcmp(regular_order, 'YES')| strcmp(regular_order, 'Y')| strcmp(regular_order, 'y')
-
+   
       scan(1) = first;
       for i=2:number_of_scans
           scan(i) = scan(i-1)+1; %loads 'scan' with the continuous numbering
